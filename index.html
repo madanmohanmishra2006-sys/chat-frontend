@@ -29,18 +29,20 @@
   </div>
 
   <script>
-    const API = 'http://localhost:5000/api';
+    const API = 'https://chat-backend-v1sh.onrender.com/api';
 
     document.getElementById('requestForm').onsubmit = async (e) => {
       e.preventDefault();
       const name = document.getElementById('reqName').value;
       const email = document.getElementById('reqEmail').value;
       const password = document.getElementById('reqPassword').value;
+
       const res = await fetch(API + '/auth/request', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({name, email, password})
       });
+
       const j = await res.json();
       document.getElementById('msg').innerText = j.message || j.error || JSON.stringify(j);
     };
@@ -49,12 +51,15 @@
       e.preventDefault();
       const email = document.getElementById('loginEmail').value;
       const password = document.getElementById('loginPassword').value;
+
       const res = await fetch(API + '/auth/login', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({email,password})
       });
+
       const j = await res.json();
+
       if (j.token) {
         localStorage.setItem('CHAT_TOKEN', j.token);
         localStorage.setItem('CHAT_USER', JSON.stringify(j.user));
