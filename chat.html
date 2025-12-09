@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Chat Room</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="box">
+    <div class="top">
+      <div id="userInfo">--</div>
+      <button id="logoutBtn">Logout</button>
+    </div>
+
+    <div id="messages" class="messages"></div>
+
+    <form id="msgForm" class="form-inline">
+      <input id="msgInput" placeholder="Type a message" autocomplete="off" />
+      <button>Send</button>
+    </form>
+  </div>
+
+  <script>
+    const API = 'http://localhost:5000/api';
+    const token = localStorage.getItem('CHAT_TOKEN');
+    const user = JSON.parse(localStorage.getItem('CHAT_USER') || 'null');
+    if (!token || !user) { alert('Please login'); window.location = 'index.html'; }
+
+    document.getElementById('userInfo').innerText = `Logged in: ${user.name || user.email}`;
+
+    // load history
+    async function loadHistory() {
+      try {
+        const res = await fetch(API + '/chat/messages', { headers: { 'Authorization': 'Bearer ' + token }});
+        const arr = await res.json();
+        const el = document.getElementById('messages');
+        el.innerHTML = '';
+        arr.forEach(m => {
+          const d = document.createElement('div');
+          d.className = 'msg';
+          d.innerText = `${m.sender || m.userId || 'Unknown'}: ${m.message || m.text || m.message}`;
+          el.appendChild(d);
+        });
+        el.scrollTop = el.scrollHeight;
+      } catch(e){ console.error(e); }
+    }
+    loadHistory();
+
+    // socket
+    const socket = io('http://localhost:5000');
+    socket.on('connect', () => {
+      console.log('socket connected');
+    });
+
+    socket.on('chatMessage', (m) => {
+      const el = document.getElementById('messages');
+      const d = document.createElement('div'); d.className='msg';
+      d.innerText = `${m.sender || m.userId || 'Someone'}: ${m.message || m.text || m}`;
+      el.appendChild(d);
+      el.scrollTop = el.scrollHeight;
+    });
+
+    document.getElementById('msgForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const text = document.getElementById('msgInput').value.trim();
+      if (!text) return;
+      // send to server (persist)
+      await fetch(API + '/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ sender: user.name || user.email, message: text })
+      });
+      // also emit realtime
+      socket.emit('chatMessage', { sender: user.name || user.email, message: text });
+      document.getElementById('msgInput').value = '';
+    };
+
+    document.getElementById('logoutBtn').onclick = () => {
+      localStorage.removeItem('CHAT_TOKEN');
+      localStorage.removeItem('CHAT_USER');
+      window.location = 'index.html';
+    };
+  </script>
+</body>
+</html>
