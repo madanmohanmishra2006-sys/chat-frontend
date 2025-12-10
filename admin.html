@@ -1,88 +1,31 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8">
   <title>Admin Panel</title>
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body>
   <div class="box">
     <h1>Admin Panel</h1>
 
-    <div>
-      <label>Admin Setup Secret (one-time)</label>
-      <input id="adminSecret" placeholder="paste ADMIN_SECRET here or use known value"/>
-      <button id="adminLogin">Get Admin Token</button>
-      <p class="info">Or set token manually in console: localStorage.setItem('CHAT_TOKEN','<token>')</p>
-    </div>
+    <h3>Admin Setup Secret (one-time)</h3>
+    <input id="setupSecret" placeholder="Paste ADMIN_SECRET here" />
+    <button id="setupBtn">Get Admin Token</button>
 
-    <hr/>
+    <hr />
 
-    <button id="loadPending">Load Pending Requests</button>
-    <div id="requests" class="requests"></div>
+    <h3>Load Pending Requests</h3>
+    <button id="loadReqBtn">Load Pending Requests</button>
 
-    <hr/>
+    <hr />
 
     <h3>Impersonate</h3>
-    <input id="impersonateId" placeholder="User ID to impersonate"/>
+    <input id="impersonateId" placeholder="User ID to impersonate" />
     <button id="impersonateBtn">Impersonate</button>
   </div>
 
-  <script>
-    const API = 'http://localhost:5000/api';
-
-    async function apiFetch(path, opts={}) {
-      const token = localStorage.getItem('CHAT_TOKEN');
-      opts.headers = {...(opts.headers||{}), 'Content-Type':'application/json'};
-      if (token) opts.headers.Authorization = 'Bearer ' + token;
-      const res = await fetch(API + path, opts);
-      return res.json();
-    }
-
-    document.getElementById('adminLogin').onclick = async () => {
-      const secret = document.getElementById('adminSecret').value.trim();
-      if (!secret) return alert('Enter secret');
-      const res = await fetch(API + '/auth/admin-setup-login', {
-        method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ secret })
-      });
-      const j = await res.json();
-      if (j.token) {
-        localStorage.setItem('CHAT_TOKEN', j.token);
-        alert('Admin token saved. You can now load pending users.');
-      } else alert(JSON.stringify(j));
-    };
-
-    document.getElementById('loadPending').onclick = async () => {
-      const list = await apiFetch('/admin/pending');
-      const c = document.getElementById('requests');
-      c.innerHTML = '';
-      (list||[]).forEach(u => {
-        const d = document.createElement('div');
-        d.className = 'req';
-        d.innerHTML = `<b>${u.name}</b> (${u.email}) - <button data-id="${u._id}" class="approve">Approve</button>`;
-        c.appendChild(d);
-      });
-      c.querySelectorAll('.approve').forEach(btn => {
-        btn.onclick = async (e) => {
-          const id = e.target.dataset.id;
-          await apiFetch('/admin/approve/' + id, { method: 'POST' });
-          alert('Approved');
-          btn.disabled = true;
-        };
-      });
-    };
-
-    document.getElementById('impersonateBtn').onclick = async () => {
-      const id = document.getElementById('impersonateId').value.trim();
-      if (!id) return alert('Enter id');
-      const res = await apiFetch('/admin/impersonate/' + id);
-      if (res.token) {
-        // set user token to impersonated user and open chat
-        localStorage.setItem('CHAT_TOKEN', res.token);
-        alert('Now impersonating user. Opening chat.html');
-        window.location = 'chat.html';
-      } else alert(JSON.stringify(res));
-    };
-  </script>
+  <script src="/js/admin.js"></script>
 </body>
 </html>
