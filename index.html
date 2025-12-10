@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Chat — Request / Login</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -29,43 +30,70 @@
   </div>
 
   <script>
+    // === IMPORTANT: Use production backend URL hosted on Render ===
     const API = 'https://chat-backend-v1sh.onrender.com/api';
 
+    // Helper to show messages
+    function showMessage(text, isError = false) {
+      const el = document.getElementById('msg');
+      el.innerText = text || '';
+      el.style.color = isError ? '#ff6b6b' : '#7bf59b';
+    }
+
+    // Request access
     document.getElementById('requestForm').onsubmit = async (e) => {
       e.preventDefault();
-      const name = document.getElementById('reqName').value;
-      const email = document.getElementById('reqEmail').value;
+      showMessage('Sending request...');
+      const name = document.getElementById('reqName').value.trim();
+      const email = document.getElementById('reqEmail').value.trim();
       const password = document.getElementById('reqPassword').value;
 
-      const res = await fetch(API + '/auth/request', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({name, email, password})
-      });
+      try {
+        const res = await fetch(API + '/auth/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password })
+        });
 
-      const j = await res.json();
-      document.getElementById('msg').innerText = j.message || j.error || JSON.stringify(j);
+        const j = await res.json();
+        if (res.ok) {
+          showMessage(j.message || 'Request sent. Wait for admin approval.');
+        } else {
+          // If server returns { error: "..."} or validation messages
+          showMessage(j.message || j.error || JSON.stringify(j), true);
+        }
+      } catch (err) {
+        showMessage('Network / server error: ' + err.message, true);
+        console.error('Request error:', err);
+      }
     };
 
+    // Login
     document.getElementById('loginForm').onsubmit = async (e) => {
       e.preventDefault();
-      const email = document.getElementById('loginEmail').value;
+      showMessage('Logging in...');
+      const email = document.getElementById('loginEmail').value.trim();
       const password = document.getElementById('loginPassword').value;
 
-      const res = await fetch(API + '/auth/login', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({email,password})
-      });
+      try {
+        const res = await fetch(API + '/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
 
-      const j = await res.json();
-
-      if (j.token) {
-        localStorage.setItem('CHAT_TOKEN', j.token);
-        localStorage.setItem('CHAT_USER', JSON.stringify(j.user));
-        window.location = 'chat.html';
-      } else {
-        document.getElementById('msg').innerText = j.message || j.error || JSON.stringify(j);
+        const j = await res.json();
+        if (res.ok && j.token) {
+          localStorage.setItem('CHAT_TOKEN', j.token);
+          localStorage.setItem('CHAT_USER', JSON.stringify(j.user || {}));
+          // redirect to chat page
+          window.location = 'chat.html';
+        } else {
+          showMessage(j.message || j.error || JSON.stringify(j), true);
+        }
+      } catch (err) {
+        showMessage('Network / server error: ' + err.message, true);
+        console.error('Login error:', err);
       }
     };
   </script>
